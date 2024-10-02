@@ -1,0 +1,25 @@
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  text-decoration: none;
+  border: none;
+  outline: none;
+  scroll-behavior: smooth;
+  font-family: 'Poppins', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  
+}
+
+::-webkit-scrollbar {
+  display: none; /* Hide scrollbar */
+}
+
+body{
+  background-color: black;
+}
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
