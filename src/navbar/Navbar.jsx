@@ -19,10 +19,12 @@ const Navbar = () => {
       switch (pathname) {
         case '/profile':
           return 'profile';
+          case '/chart':
+          return 'chart';
          case '/creator':
           return 'creator';
         default:
-          return 'profile';
+          return 'chart';
       }
     }
   
@@ -60,8 +62,9 @@ const Navbar = () => {
               )}
           </div>
           <div className="nav-list">
-              <Link  to="" className={`link ${activeButton === 'profile' ? 'active' : ''}`} onClick={() => handleButtonClick('profile')}> Profile</Link>
-              <Link to="" className={`link ${activeButton === 'creator' ? 'active' : ''}`} onClick={() => handleButtonClick('creator')}> Creator</Link>
+              <Link  to="/profile " className={`link ${activeButton === 'profile' ? 'active' : ''}`} onClick={() => handleButtonClick('profile')}> Profile</Link>
+              <Link to="/chart" className={`link ${activeButton === 'chart' ? 'active' : ''}`} onClick={() => handleButtonClick('chart')}> Messages</Link>
+              <Link to="/creator" className={`link ${activeButton === 'creator' ? 'active' : ''}`} onClick={() => handleButtonClick('creator')}> Creator</Link>
               <Link 
                   to="/login" 
                   className="text-white px-5 py-3 text-lg rounded-md bg-[#8A2BE2] transition duration-300 ease-in-out transform hover:scale-105"

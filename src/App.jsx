@@ -5,9 +5,9 @@ import Login from './gateway/Login'
 import UploadPic from './pages/uploadpic'
 import Navbar from './navbar/Navbar'
 import MessagePage from './pages/messagepage'
+import Profile from './pages/profile'
 
 const App = () => {
-
   // Hi Guys 
   // This is Jinx Chart app in progress
 
@@ -18,11 +18,13 @@ const App = () => {
         <Route path="/signin" element={<Signin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/upload" element={<UploadPic />} />
-        {/* New route for MessagePage with Navbar */}
-        <Route path="/messages" element={
+        <Route path="*" element={
           <>
             <Navbar />
-            <MessagePage />
+            <Routes>
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/chart" element={<MessagePage />} />
+            </Routes>
           </>
         } />
       </Routes>
