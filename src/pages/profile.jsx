@@ -1,15 +1,41 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
+import { auth, storage } from '../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { updateProfile } from 'firebase/auth';
 
 const Profile = () => {
   const fileInputRef = useRef(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [username, setUsername] = useState("John Doe");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [profilePicUrl, setProfilePicUrl] = useState("");
 
-  const handlePictureUpload = (event) => {
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      setUsername(user.displayName || "");
+      setEmail(user.email || "");
+      setProfilePicUrl(user.photoURL || "");
+    }
+  }, []);
+
+  const handlePictureUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
-      // TODO: Handle the file upload logic here
-      console.log('File selected:', file.name);
+      try {
+        const user = auth.currentUser;
+        const storageRef = ref(storage, `profile_pics/${user.uid}`);
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+
+        await updateProfile(user, { photoURL: downloadURL });
+        setProfilePicUrl(downloadURL);
+
+        console.log('Profile picture updated successfully');
+      } catch (error) {
+        console.error('Error updating profile picture:', error);
+        alert('Failed to update profile picture. Please try again.');
+      }
     }
   };
 
@@ -21,20 +47,31 @@ const Profile = () => {
     setUsername(event.target.value);
   };
 
-  const handleUsernameSubmit = (event) => {
+  const handleUsernameSubmit = async (event) => {
     event.preventDefault();
     setIsEditingUsername(false);
-    // TODO: Add logic to update username in the backend
+    try {
+      const user = auth.currentUser;
+      await updateProfile(user, { displayName: username });
+      console.log('Username updated successfully');
+    } catch (error) {
+      console.error('Error updating username:', error);
+      alert('Failed to update username. Please try again.');
+    }
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
       <div className="bg-white p-8 rounded-lg shadow-md w-full side-phone:w-[18rem] max-w-md">
         <div className="relative w-32 h-32 sm:w-48 sm:h-48 mx-auto mb-6">
-          <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center">
-            <svg className="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-            </svg>
+          <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+            {profilePicUrl ? (
+              <img src={profilePicUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <svg className="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+              </svg>
+            )}
           </div>
           <button
             className="absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition duration-300"
@@ -81,7 +118,7 @@ const Profile = () => {
               </>
             )}
           </div>
-          <p className="text-gray-600">johndoe@example.com</p>
+          <p className="text-gray-600">{email}</p>
         </div>
       </div>
     </div>

@@ -8,30 +8,41 @@ import MessagePage from './pages/messagepage'
 import Profile from './pages/profile'
 import ChartPeople from './pages/chartpeople'
 import Creator from './pages/creator'
-const App = () => {
-  // Hi Guys 
-  // This is Jinx Chart app in progress
+import ProtectedRoute from './Protectedroutes'
+import { AuthProvider } from './AuthContext'
 
+const App = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/signin" replace />} />
-        <Route path="/signin" element={<Signin />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/upload" element={<UploadPic />} />
-        <Route path="/chartpeople" element={<ChartPeople />} />
-        <Route path="*" element={
-          <>
-            <Navbar />
-            <Routes>
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/chart" element={<MessagePage />} />
-              <Route path="/creator" element={<Creator />} />
-            </Routes>
-          </>
-        } />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Navigate to="/signin" replace />} />
+          <Route path="/signin" element={<Signin />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/upload" element={
+            <ProtectedRoute>
+              <UploadPic />
+            </ProtectedRoute>
+          } />
+          <Route path="/chart" element={
+            <ProtectedRoute>
+              <Navbar />
+              <MessagePage />
+            </ProtectedRoute>
+          } />
+          <Route path="*" element={
+            <ProtectedRoute>
+              <Navbar />
+              <Routes>
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/chart" element={<MessagePage />} />
+                <Route path="/creator" element={<Creator />} />
+              </Routes>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Router>
+    </AuthProvider>
   )
 }
 
