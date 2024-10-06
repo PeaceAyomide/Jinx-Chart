@@ -1,7 +1,10 @@
 import React from 'react'
 import { CiSearch } from "react-icons/ci";
+import { useNavigate } from 'react-router-dom';
 
 const messagepage = () => {
+  const navigate = useNavigate();
+
   // Sample list of names with online status (you can replace this with your actual data)
   const names = [
     { name: 'John Doe', isOnline: true },
@@ -18,7 +21,9 @@ const messagepage = () => {
           <CiSearch className='text-[#9E9EA2]  absolute  mr-[26rem] IPad:mr-[16rem] text-[1.5rem] side-phone:mr-[10.5rem]' />
         </div>
         <div className='flex justify-center items-center side-phone:pb-[5rem]'>
-          <button  className='text-white bg-[#8A2BE2] px-4 py-3.5 text-[0.9rem] rounded-[1rem] IPad:text-[0.7rem] side-phone:text-[0.6rem] transition duration-300 ease-in-out transform hover:scale-105'>Search</button>
+          <button className='text-white bg-[#8A2BE2] px-4 py-3.5 text-[0.9rem] rounded-[1rem] IPad:text-[0.7rem] side-phone:text-[0.6rem] transition duration-300 ease-in-out transform hover:scale-105'>
+            Search
+          </button>
         </div>
       </div>
 
@@ -32,10 +37,13 @@ const messagepage = () => {
                 <span className='text-white'>{user.name}</span>
               </div>
               <div className='space-x-2'>
-                <button className='bg-[#8A2BE2] text-white px-4 py-2 side-phone:px-2 side-phone:py-1 rounded-md hover:bg-opacity-80 transition duration-300'>
+                <button 
+                  className='bg-[#8A2BE2] text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
+                  onClick={() => navigate('/chartpeople')}
+                >
                   Chat
                 </button>
-                <button className='bg-red-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 rounded-md hover:bg-opacity-80 transition duration-300'>
+                <button className='bg-red-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'>
                   Remove
                 </button>
               </div>

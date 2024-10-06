@@ -7,7 +7,7 @@ const UploadPic = () => {
   const handleUpload = () => {
     // Here you would typically handle the file upload
     // For now, we'll just navigate to the message page
-    navigate('/messages');
+    navigate('/chart');
   };
 
   return (
