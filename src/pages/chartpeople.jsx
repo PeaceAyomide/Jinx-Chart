@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
-import { collection, query, orderBy, limit, addDoc, serverTimestamp, onSnapshot, where, doc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, addDoc, serverTimestamp, onSnapshot, where, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import useSound from 'use-sound';
+import newMessageSound from '../assets/notificationsound.m4a'; // Adjust the path as needed
 
 const ChatPeople = () => {
   const navigate = useNavigate();
@@ -11,6 +13,23 @@ const ChatPeople = () => {
   const [newMessage, setNewMessage] = useState('');
   const [chatPartner, setChatPartner] = useState(null);
   const messagesEndRef = useRef(null);
+  const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
+  const [playNewMessageSound] = useSound(newMessageSound);
+  const previousMessagesLengthRef = useRef(0);
+  const textareaRef = useRef(null);
+
+  const handleInputChange = (e) => {
+    setNewMessage(e.target.value);
+    adjustTextareaHeight();
+  };
+
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  };
 
   useEffect(() => {
     if (!userId || !auth.currentUser) return;
@@ -31,8 +50,7 @@ const ChatPeople = () => {
     const q = query(
       collection(db, 'messages'),
       where('participants', 'array-contains', auth.currentUser.uid),
-      orderBy('createdAt', 'asc'),
-      limit(50)
+      orderBy('createdAt', 'asc')
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -47,14 +65,27 @@ const ChatPeople = () => {
           });
         }
       });
+      
       console.log("Fetched messages:", fetchedMessages);
+      
+      if (fetchedMessages.length > previousMessagesLengthRef.current && 
+          previousMessagesLengthRef.current > 0 &&
+          fetchedMessages[fetchedMessages.length - 1].userId !== auth.currentUser.uid) {
+        playNewMessageSound();
+      }
+      
+      previousMessagesLengthRef.current = fetchedMessages.length;
       setMessages(fetchedMessages);
+      
+      if (fetchedMessages.length > 0) {
+        setLastMessageTimestamp(fetchedMessages[fetchedMessages.length - 1].createdAt);
+      }
     }, (error) => {
       console.error("Error fetching messages:", error);
     });
 
     return () => unsubscribe();
-  }, [userId]);
+  }, [userId, playNewMessageSound]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,9 +105,9 @@ const ChatPeople = () => {
       });
       
       setNewMessage('');
+      adjustTextareaHeight(); // Reset height after sending
     } catch (error) {
       console.error('Error sending message:', error);
-      // Optionally, show an error message to the user
     }
   };
 
@@ -149,13 +180,15 @@ const ChatPeople = () => {
 
       {/* Message input */}
       <form onSubmit={sendMessage} className="p-4 bg-gray-900">
-        <div className="flex items-center">
-          <input
-            type="text"
+        <div className="flex items-end">
+          <textarea
+            ref={textareaRef}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={handleInputChange}
             placeholder="Type a message"
-            className="flex-1 bg-gray-800 text-white rounded-full py-2 px-4 focus:outline-none focus:ring-2 focus:ring-purple-600"
+            className="flex-1 bg-gray-800 text-white rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-purple-600 resize-none overflow-hidden"
+            style={{ minHeight: '40px', maxHeight: '120px' }}
+            rows={1}
           />
           <button type="submit" className="ml-2 bg-purple-600 text-white rounded-full p-2 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-600">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
