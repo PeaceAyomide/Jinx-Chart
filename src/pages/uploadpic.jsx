@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { storage } from '../firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth } from '../firebase';
-import { updateProfile } from 'firebase/auth';
+import { storage } from '../firebase'; // Firebase storage
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Firebase storage functions
+import { auth } from '../firebase'; // Firebase authentication
+import { updateProfile } from 'firebase/auth'; // Firebase auth function
+import { doc, updateDoc } from 'firebase/firestore'; // Firestore functions
+import { db } from '../firebase'; // Firestore database
 
 const UploadPic = () => {
   const navigate = useNavigate();
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [file, setFile] = useState(null); // State for selected file
+  const [uploading, setUploading] = useState(false); // State for upload status
 
+  // Handle file selection
   const handleFileChange = (e) => {
     if (e.target.files[0]) {
       setFile(e.target.files[0]);
     }
   };
 
+  // Handle file upload
   const handleUpload = async () => {
     if (!file) {
       alert('Please select a file first!');
@@ -30,14 +34,22 @@ const UploadPic = () => {
         throw new Error('No authenticated user found');
       }
 
+      // Upload file to Firebase storage
       const storageRef = ref(storage, `profile_pics/${user.uid}`);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
 
+      // Update user profile with photo URL
       await updateProfile(user, { photoURL: downloadURL });
 
-      console.log('Profile picture uploaded successfully');
-      navigate('/chart');
+      // Update user document in Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        photoURL: downloadURL
+      });
+
+      console.log('Profile picture uploaded successfully and Firestore updated');
+      navigate('/chart'); // Redirect after successful upload
     } catch (error) {
       console.error('Error uploading profile picture:', error);
       alert('Failed to upload profile picture. Please try again.');

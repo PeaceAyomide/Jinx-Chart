@@ -30,6 +30,13 @@ const App = () => {
               <MessagePage />
             </ProtectedRoute>
           } />
+          
+          <Route path="/chat/:userId" element={
+            <ProtectedRoute>
+            
+              <ChartPeople />
+            </ProtectedRoute>
+          } />
           <Route path="*" element={
             <ProtectedRoute>
               <Navbar />

@@ -4,12 +4,14 @@ import { auth } from '../firebase'; // Import the auth object from your firebase
 import { signInWithEmailAndPassword } from 'firebase/auth'; // Import the function
 
 const Login = () => {
+  // State variables for form inputs and error handling
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); // State for password visibility
   const [error, setError] = useState(''); // New state for error message
   const navigate = useNavigate();
 
+  // Handle form submission for user login
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -17,16 +19,15 @@ const Login = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
+      // Redirect based on user's profile picture status
       if (user.photoURL) {
-        // User has a profile picture, redirect to chat
-        navigate('/chart');
+        navigate('/chart'); // Redirect to chat if profile picture exists
       } else {
-        // User doesn't have a profile picture, redirect to upload
-        navigate('/upload');
+        navigate('/upload'); // Redirect to upload if no profile picture
       }
     } catch (error) {
       console.error('Error logging in:', error.message);
-      setError('Invalid email or password');
+      setError('Invalid email or password'); // Set error message
     }
   };
 
@@ -40,6 +41,7 @@ const Login = () => {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
+            {/* Email input field */}
             <div>
               <label htmlFor="email" className="sr-only">
                 Email
@@ -56,6 +58,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+            {/* Password input field with toggle visibility */}
             <div className="relative">
               <label htmlFor="password" className="sr-only">
                 Password
@@ -81,6 +84,7 @@ const Login = () => {
             </div>
           </div>
 
+          {/* Submit button */}
           <div>
             <button
               type="submit"
@@ -90,17 +94,17 @@ const Login = () => {
             </button>
           </div>
         </form>
+        {/* Link to sign up page */}
         <div className="text-center">
           <Link to="/signin" className="font-medium text-indigo-600 hover:text-indigo-500">
             Don't have an account? Sign up
           </Link>
-         
         </div>
+        {/* Error message display */}
         <div className="text-center mt-2" style={{ height: '24px' }}>
           {error && <div className="text-red-600">{error}</div>}
-        </div> {/* Error message container with fixed height */}
+        </div>
       </div>
-      
     </div>
   );
 };
