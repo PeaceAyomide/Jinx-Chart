@@ -19,6 +19,7 @@ const messagepage = () => {
   const [lastFetchTime, setLastFetchTime] = useState(() => {
     return localStorage.getItem('lastUsersFetchTime') || 0;
   });
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch users from Firestore, excluding the current user
   const fetchUsers = useCallback(async () => {
@@ -69,6 +70,14 @@ const messagepage = () => {
     console.log(`User ${userToUnblock.username} has been unblocked.`);
   };
 
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const filteredUsers = users.filter(user => 
+    user.username && user.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   useEffect(() => {
     fetchUsers(); // Initial fetch
 
@@ -116,11 +125,24 @@ const messagepage = () => {
       {/* Search bar and button */}
       <div className='flex justify-center gap-[2.5rem] IPad:gap-[2rem] side-phone:gap-2 side-phone:flex-col'>
         <div className='text-white flex justify-center items-center relative py-[5.7rem] side-phone:pt-[7rem] side-phone:pb-[1rem] IPad:pl-[4rem] side-phone:py-[11rem] side-phone:pl-[0]'>
-          <input type="text" placeholder='Search Friends' className='bg-[#4B0082] pl-[3.6rem] w-[30rem] h-[3rem] rounded-[1rem] IPad:w-[20rem] side-phone:w-[14rem]' />
+          <input 
+            type="text" 
+            placeholder='Search Friends' 
+            className='bg-[#4B0082] pl-[3.6rem] w-[30rem] h-[3rem] rounded-[1rem] IPad:w-[20rem] side-phone:w-[14rem]' 
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
           <CiSearch className='text-[#9E9EA2] absolute mr-[26rem] IPad:mr-[16rem] text-[1.5rem] side-phone:mr-[10.5rem]' />
         </div>
         <div className='flex justify-center items-center side-phone:pb-[5rem]'>
-          <button className='text-white bg-[#8A2BE2] px-4 py-3.5 text-[0.9rem] rounded-[1rem] IPad:text-[0.7rem] side-phone:text-[0.6rem] transition duration-300 ease-in-out transform hover:scale-105'>
+          <button 
+            className='text-white bg-[#8A2BE2] px-4 py-3.5 text-[0.9rem] rounded-[1rem] IPad:text-[0.7rem] side-phone:text-[0.6rem] transition duration-300 ease-in-out transform hover:scale-105'
+            onClick={() => {
+              if (filteredUsers.length === 0) {
+                alert('Username does not exist');
+              }
+            }}
+          >
             Search
           </button>
         </div>
@@ -129,50 +151,54 @@ const messagepage = () => {
       {/* User list */}
       <div className='max-w-2xl mx-auto px-4'>
         <ul className='space-y-4'>
-          {users.map((user) => (
-            <li key={user.id} className='flex items-center justify-between bg-gray-800 p-4 rounded-lg'>
-              <div className='flex items-center space-x-4'>
-                <div className='w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center text-white text-xl font-bold overflow-hidden'>
-                  {user.photoURL ? (
-                    <img 
-                      src={`${user.photoURL}?${refreshKey}`} 
-                      alt={user.username} 
-                      className="w-full h-full object-cover" 
-                    />
+          {filteredUsers.length > 0 ? (
+            filteredUsers.map((user) => (
+              <li key={user.id} className='flex items-center justify-between bg-gray-800 p-4 rounded-lg'>
+                <div className='flex items-center space-x-4'>
+                  <div className='w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center text-white text-xl font-bold overflow-hidden'>
+                    {user.photoURL ? (
+                      <img 
+                        src={`${user.photoURL}?${refreshKey}`} 
+                        alt={user.username} 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      user.username ? user.username.charAt(0).toUpperCase() : '?'
+                    )}
+                  </div>
+                  <span className='text-white truncate max-w-[8ch]' title={user.username}>
+                    {user.username ? (user.username.length > 8 ? `${user.username.slice(0, 8)}...` : user.username) : 'Unknown'}
+                  </span>
+                </div>
+                <div className='space-x-2'>
+                  <button 
+                    className={`bg-[#8A2BE2] text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300 ${blockedUsers.includes(user.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => navigate(`/chat/${user.id}`)}
+                    disabled={blockedUsers.includes(user.id)}
+                  >
+                    Chat
+                  </button>
+                  {blockedUsers.includes(user.id) ? (
+                    <button 
+                      className='bg-green-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
+                      onClick={() => handleUnblockUser(user)}
+                    >
+                      Unblock
+                    </button>
                   ) : (
-                    user.username ? user.username.charAt(0).toUpperCase() : '?'
+                    <button 
+                      className='bg-red-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
+                      onClick={() => handleBlockUser(user)}
+                    >
+                      Block
+                    </button>
                   )}
                 </div>
-                <span className='text-white truncate max-w-[8ch]' title={user.username}>
-                  {user.username ? (user.username.length > 8 ? `${user.username.slice(0, 8)}...` : user.username) : 'Unknown'}
-                </span>
-              </div>
-              <div className='space-x-2'>
-                <button 
-                  className={`bg-[#8A2BE2] text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300 ${blockedUsers.includes(user.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => navigate(`/chat/${user.id}`)}
-                  disabled={blockedUsers.includes(user.id)}
-                >
-                  Chat
-                </button>
-                {blockedUsers.includes(user.id) ? (
-                  <button 
-                    className='bg-green-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
-                    onClick={() => handleUnblockUser(user)}
-                  >
-                    Unblock
-                  </button>
-                ) : (
-                  <button 
-                    className='bg-red-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
-                    onClick={() => handleBlockUser(user)}
-                  >
-                    Block
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
+              </li>
+            ))
+          ) : (
+            <li className='text-white text-center'>No users found</li>
+          )}
         </ul>
       </div>
     </div>
