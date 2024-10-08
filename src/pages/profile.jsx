@@ -11,12 +11,32 @@ const Profile = () => {
   const [profilePicUrl, setProfilePicUrl] = useState("");
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user) {
-      setUsername(user.displayName || "");
-      setEmail(user.email || "");
-      setProfilePicUrl(user.photoURL || "");
-    }
+    const loadProfileData = async () => {
+      const cachedData = JSON.parse(localStorage.getItem('profileData') || '{}');
+      setUsername(cachedData.username || "");
+      setEmail(cachedData.email || "");
+      setProfilePicUrl(cachedData.profilePicUrl || "");
+
+      if (navigator.onLine) {
+        const user = auth.currentUser;
+        if (user) {
+          const newData = {
+            username: user.displayName || "",
+            email: user.email || "",
+            profilePicUrl: user.photoURL || ""
+          };
+          setUsername(newData.username);
+          setEmail(newData.email);
+          setProfilePicUrl(newData.profilePicUrl);
+          localStorage.setItem('profileData', JSON.stringify(newData));
+        }
+      }
+    };
+
+    loadProfileData();
+
+    window.addEventListener('online', loadProfileData);
+    return () => window.removeEventListener('online', loadProfileData);
   }, []);
 
   const handlePictureUpload = async (event) => {
@@ -30,6 +50,11 @@ const Profile = () => {
 
         await updateProfile(user, { photoURL: downloadURL });
         setProfilePicUrl(downloadURL);
+
+        // Update local storage
+        const cachedData = JSON.parse(localStorage.getItem('profileData') || '{}');
+        cachedData.profilePicUrl = downloadURL;
+        localStorage.setItem('profileData', JSON.stringify(cachedData));
 
         console.log('Profile picture updated successfully');
       } catch (error) {
@@ -53,6 +78,12 @@ const Profile = () => {
     try {
       const user = auth.currentUser;
       await updateProfile(user, { displayName: username });
+
+      // Update local storage
+      const cachedData = JSON.parse(localStorage.getItem('profileData') || '{}');
+      cachedData.username = username;
+      localStorage.setItem('profileData', JSON.stringify(cachedData));
+
       console.log('Username updated successfully');
     } catch (error) {
       console.error('Error updating username:', error);

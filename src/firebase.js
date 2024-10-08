@@ -9,12 +9,12 @@ import { doc, setDoc } from 'firebase/firestore'; // Import Firestore functions
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBklA6iGAGJ3rmyQ7m7v-ck8OxnH_sOGgk",
-  authDomain: "jinx-chartw.firebaseapp.com",
-  projectId: "jinx-chartw",
-  storageBucket: "jinx-chartw.appspot.com",
-  messagingSenderId: "909901919689",
-  appId: "1:909901919689:web:908924225fc44c15fce418"
+  apiKey: "AIzaSyB-DzaxYU-E2a4VtAKF-yjhEpwfvmMou2I",
+  authDomain: "jinx-chaty.firebaseapp.com",
+  projectId: "jinx-chaty",
+  storageBucket: "jinx-chaty.appspot.com",
+  messagingSenderId: "523712905405",
+  appId: "1:523712905405:web:e3b20098ad9c9fe746f7d4"
 };
 
 // Initialize Firebase

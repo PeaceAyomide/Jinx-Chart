@@ -6,11 +6,30 @@ import { auth, db } from '../firebase'; // Adjust the path as necessary
 
 const messagepage = () => {
   const navigate = useNavigate();
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(() => {
+    // Retrieve users from local storage on initial load
+    const savedUsers = localStorage.getItem('cachedUsers');
+    return savedUsers ? JSON.parse(savedUsers) : [];
+  });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [blockedUsers, setBlockedUsers] = useState(() => {
+    const savedBlockedUsers = localStorage.getItem('blockedUsers');
+    return savedBlockedUsers ? JSON.parse(savedBlockedUsers) : [];
+  });
+  const [lastFetchTime, setLastFetchTime] = useState(() => {
+    return localStorage.getItem('lastUsersFetchTime') || 0;
+  });
 
   // Fetch users from Firestore, excluding the current user
   const fetchUsers = useCallback(async () => {
+    const now = Date.now();
+    const FETCH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+    if (now - lastFetchTime < FETCH_INTERVAL) {
+      console.log("Using cached user data");
+      return;
+    }
+
     try {
       const currentUser = auth.currentUser;
       if (currentUser) {
@@ -26,12 +45,29 @@ const messagepage = () => {
             };
           });
         setUsers(usersList);
+        localStorage.setItem('cachedUsers', JSON.stringify(usersList));
+        localStorage.setItem('lastUsersFetchTime', now.toString());
+        setLastFetchTime(now);
         setRefreshKey(prevKey => prevKey + 1);
       }
     } catch (error) {
       console.error("Error fetching users: ", error);
     }
-  }, []);
+  }, [lastFetchTime]);
+
+  const handleBlockUser = (userToBlock) => {
+    const updatedBlockedUsers = [...blockedUsers, userToBlock.id];
+    setBlockedUsers(updatedBlockedUsers);
+    localStorage.setItem('blockedUsers', JSON.stringify(updatedBlockedUsers));
+    console.log(`User ${userToBlock.username} has been blocked.`);
+  };
+
+  const handleUnblockUser = (userToUnblock) => {
+    const updatedBlockedUsers = blockedUsers.filter(id => id !== userToUnblock.id);
+    setBlockedUsers(updatedBlockedUsers);
+    localStorage.setItem('blockedUsers', JSON.stringify(updatedBlockedUsers));
+    console.log(`User ${userToUnblock.username} has been unblocked.`);
+  };
 
   useEffect(() => {
     fetchUsers(); // Initial fetch
@@ -42,11 +78,19 @@ const messagepage = () => {
         (docSnapshot) => {
           const userData = docSnapshot.data();
           if (userData) {
-            setUsers(prevUsers => prevUsers.map(u => 
-              u.id === user.id ? { ...u, ...userData, isOnline: userData.isOnline || false } : u
-            ));
+            setUsers(prevUsers => {
+              const updatedUsers = prevUsers.map(u => 
+                u.id === user.id ? { ...u, ...userData, isOnline: userData.isOnline || false } : u
+              );
+              localStorage.setItem('cachedUsers', JSON.stringify(updatedUsers));
+              return updatedUsers;
+            });
           } else {
-            setUsers(prevUsers => prevUsers.filter(u => u.id !== user.id));
+            setUsers(prevUsers => {
+              const updatedUsers = prevUsers.filter(u => u.id !== user.id);
+              localStorage.setItem('cachedUsers', JSON.stringify(updatedUsers));
+              return updatedUsers;
+            });
           }
         },
         (error) => {
@@ -58,7 +102,7 @@ const messagepage = () => {
     // Set up interval for periodic refresh
     const intervalId = setInterval(() => {
       fetchUsers();
-    }, 20000); // Refresh every 20 seconds
+    }, 5 * 60 * 1000); // Refresh every 5 minutes
 
     // Clean up interval and listeners on component unmount
     return () => {
@@ -105,14 +149,27 @@ const messagepage = () => {
               </div>
               <div className='space-x-2'>
                 <button 
-                  className='bg-[#8A2BE2] text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
+                  className={`bg-[#8A2BE2] text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300 ${blockedUsers.includes(user.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => navigate(`/chat/${user.id}`)}
+                  disabled={blockedUsers.includes(user.id)}
                 >
                   Chat
                 </button>
-                <button className='bg-red-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'>
-                  Remove
-                </button>
+                {blockedUsers.includes(user.id) ? (
+                  <button 
+                    className='bg-green-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
+                    onClick={() => handleUnblockUser(user)}
+                  >
+                    Unblock
+                  </button>
+                ) : (
+                  <button 
+                    className='bg-red-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
+                    onClick={() => handleBlockUser(user)}
+                  >
+                    Block
+                  </button>
+                )}
               </div>
             </li>
           ))}

@@ -37,6 +37,13 @@ const ChatPeople = () => {
     console.log("Current user ID:", auth.currentUser.uid);
     console.log("Chat partner ID:", userId);
 
+    // Load messages from local storage
+    const storedMessages = JSON.parse(localStorage.getItem(`messages_${userId}`)) || [];
+    setMessages(storedMessages);
+    if (storedMessages.length > 0) {
+      setLastMessageTimestamp(storedMessages[storedMessages.length - 1].createdAt);
+    }
+
     // Fetch chat partner information
     const fetchChatPartner = async () => {
       const userDoc = await getDoc(doc(db, 'users', userId));
@@ -47,11 +54,17 @@ const ChatPeople = () => {
 
     fetchChatPartner();
 
-    const q = query(
+    // Construct the query
+    let q = query(
       collection(db, 'messages'),
       where('participants', 'array-contains', auth.currentUser.uid),
       orderBy('createdAt', 'asc')
     );
+
+    // Add a condition for new messages if lastMessageTimestamp is available
+    if (lastMessageTimestamp) {
+      q = query(q, where('createdAt', '>', lastMessageTimestamp));
+    }
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedMessages = [];
@@ -65,27 +78,31 @@ const ChatPeople = () => {
           });
         }
       });
-      
+
       console.log("Fetched messages:", fetchedMessages);
-      
+
       if (fetchedMessages.length > previousMessagesLengthRef.current && 
           previousMessagesLengthRef.current > 0 &&
           fetchedMessages[fetchedMessages.length - 1].userId !== auth.currentUser.uid) {
         playNewMessageSound();
       }
-      
-      previousMessagesLengthRef.current = fetchedMessages.length;
-      setMessages(fetchedMessages);
-      
-      if (fetchedMessages.length > 0) {
-        setLastMessageTimestamp(fetchedMessages[fetchedMessages.length - 1].createdAt);
+
+      const updatedMessages = [...storedMessages, ...fetchedMessages];
+      previousMessagesLengthRef.current = updatedMessages.length;
+      setMessages(updatedMessages);
+
+      // Save updated messages to local storage
+      localStorage.setItem(`messages_${userId}`, JSON.stringify(updatedMessages));
+
+      if (updatedMessages.length > 0) {
+        setLastMessageTimestamp(updatedMessages[updatedMessages.length - 1].createdAt);
       }
     }, (error) => {
       console.error("Error fetching messages:", error);
     });
 
     return () => unsubscribe();
-  }, [userId, playNewMessageSound]);
+  }, [userId, playNewMessageSound, lastMessageTimestamp]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -95,25 +112,39 @@ const ChatPeople = () => {
     e.preventDefault();
     if (newMessage.trim() === '') return;
 
+    const messageText = newMessage.trim();
+    setNewMessage('');
+    adjustTextareaHeight(); // Reset height immediately
+
     try {
       await addDoc(collection(db, 'messages'), {
-        text: newMessage,
+        text: messageText,
         createdAt: serverTimestamp(),
         userId: auth.currentUser.uid,
         recipientId: userId,
         participants: [auth.currentUser.uid, userId]
       });
-      
-      setNewMessage('');
-      adjustTextareaHeight(); // Reset height after sending
     } catch (error) {
       console.error('Error sending message:', error);
+      // Optionally, you can set the message back if it fails to send
+      // setNewMessage(messageText);
     }
   };
 
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return '';
-    const date = timestamp instanceof Date ? timestamp : timestamp.toDate();
+  
+    let date;
+    if (timestamp instanceof Date) {
+      date = timestamp;
+    } else if (timestamp.seconds) {
+      // If it's a Firestore Timestamp object
+      date = new Date(timestamp.seconds * 1000);
+    } else {
+      // Fallback for other types (e.g., string or number)
+      date = new Date(timestamp);
+    }
+
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -157,8 +188,8 @@ const ChatPeople = () => {
 
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.userId === auth.currentUser.uid ? 'justify-end' : 'justify-start'}`}>
+        {messages.map((message, index) => (
+          <div key={`${message.id}-${index}`} className={`flex ${message.userId === auth.currentUser.uid ? 'justify-end' : 'justify-start'}`}>
             <div 
               className={`
                 ${message.userId === auth.currentUser.uid 
