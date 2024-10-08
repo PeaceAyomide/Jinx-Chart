@@ -32,8 +32,10 @@ const CreatorProfile = () => {
         </div>
         <div className="flex p-4 border-t border-gray-300 text-gray-700">
           <div className="flex-1 inline-flex items-center justify-center">
-            <FaWhatsapp className="h-6 w-6 text-green-500" />
-            <span className="ml-2">WhatsApp</span>
+            <a href="https://wa.me/2348102608378" target="_blank" rel="noopener noreferrer" className="flex items-center">
+              <FaWhatsapp className="h-6 w-6 text-green-500" />
+              <span className="ml-2">WhatsApp</span>
+            </a>
           </div>
           <div className="flex-1 inline-flex items-center justify-center">
             <a href="https://github.com/PeaceAyomide" target="_blank" rel="noopener noreferrer" className="flex items-center">
