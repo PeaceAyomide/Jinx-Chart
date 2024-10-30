@@ -22,17 +22,6 @@ const messagepage = () => {
   });
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Request notification permission
-  useEffect(() => {
-    if (Notification.permission !== 'granted') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          console.log('Notification permission granted.');
-        }
-      });
-    }
-  }, []);
-
   // Fetch users from Firestore, excluding the current user
   const fetchUsers = useCallback(async () => {
     const now = Date.now();

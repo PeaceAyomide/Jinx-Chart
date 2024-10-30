@@ -72,15 +72,6 @@ const ChatPeople = () => {
           previousMessagesLengthRef.current > 0 &&
           fetchedMessages[fetchedMessages.length - 1].userId !== auth.currentUser.uid) {
         playNewMessageSound();
-
-        // Send a notification
-        if (Notification.permission === 'granted') {
-          const lastMessage = fetchedMessages[fetchedMessages.length - 1];
-          new Notification('New Message', {
-            body: lastMessage.text,
-            icon: chatPartner?.photoURL || '/path/to/default/icon.png'
-          });
-        }
       }
       
       previousMessagesLengthRef.current = fetchedMessages.length;

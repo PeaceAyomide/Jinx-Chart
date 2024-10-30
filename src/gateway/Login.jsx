@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase'; // Import the auth object from your firebase.js
 import { signInWithEmailAndPassword } from 'firebase/auth'; // Import the function
@@ -35,16 +35,6 @@ const Login = () => {
       setLoading(false); // Stop loading
     }
   };
-
-  useEffect(() => {
-    if (Notification.permission !== 'granted') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          console.log('Notification permission granted.');
-        }
-      });
-    }
-  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black py-12 px-4 sm:px-6 lg:px-8 relative">
