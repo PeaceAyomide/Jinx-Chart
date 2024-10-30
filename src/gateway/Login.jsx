@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase'; // Import the auth object from your firebase.js
 import { signInWithEmailAndPassword } from 'firebase/auth'; // Import the function
+import { FadeLoader } from 'react-spinners'; // Add this import
 
 const Login = () => {
   // State variables for form inputs and error handling
@@ -9,11 +10,13 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); // State for password visibility
   const [error, setError] = useState(''); // New state for error message
+  const [loading, setLoading] = useState(false); // Add loading state
   const navigate = useNavigate();
 
   // Handle form submission for user login
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true); // Start loading
     try {
       // Sign in the user with email and password
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -28,11 +31,18 @@ const Login = () => {
     } catch (error) {
       console.error('Error logging in:', error.message);
       setError('Invalid email or password'); // Set error message
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-black py-12 px-4 sm:px-6 lg:px-8 relative">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
+          <FadeLoader color="#ffffff" loading={loading} size={50} />
+        </div>
+      )}
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-400">

@@ -1,35 +1,35 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth } from '../firebase'; // Firebase authentication
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'; // Firebase auth functions
-import { doc, setDoc } from 'firebase/firestore'; // Firestore functions
-import { db } from '../firebase'; // Firestore database
+import { auth } from '../firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { FadeLoader } from 'react-spinners';
 
 const Signin = () => {
-  // State variables for form inputs and error handling
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Handle form submission for user registration
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       console.log("Starting user registration...");
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log("User created with UID:", userCredential.user.uid);
+      const user = userCredential.user;
+      console.log("User created with UID:", user.uid);
       
-      // Update user profile with username
-      await updateProfile(userCredential.user, {
+      await updateProfile(user, {
         displayName: username
       });
       console.log("User profile updated with username:", username);
 
-      // Add user document to Firestore
-      const userDocRef = doc(db, 'users', userCredential.user.uid);
+      const userDocRef = doc(db, 'users', user.uid);
       await setDoc(userDocRef, {
         username: username,
         email: email,
@@ -38,10 +38,15 @@ const Signin = () => {
       console.log("User document added to Firestore");
 
       console.log('User registered successfully:', { email, username });
-      navigate('/login'); // Redirect to login page
+
+      // Redirect based on user's profile picture status
+      if (user.photoURL) {
+        navigate('/chart'); // Redirect to chat if profile picture exists
+      } else {
+        navigate('/upload'); // Redirect to upload if no profile picture
+      }
     } catch (error) {
       console.error("Error during registration:", error);
-      // Handle different error codes
       switch (error.code) {
         case 'auth/email-already-in-use':
           setError('This email is already registered.');
@@ -56,11 +61,18 @@ const Signin = () => {
           setError('An unexpected error occurred.');
       }
       console.error('Error signing up:', error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-black py-12 px-4 sm:px-6 lg:px-8 relative">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
+          <FadeLoader color="#ffffff" loading={loading} size={50} />
+        </div>
+      )}
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-400">

@@ -7,9 +7,10 @@ import { auth, db } from '../firebase'; // Adjust the path as necessary
 const messagepage = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState(() => {
-    // Retrieve users from local storage on initial load
     const savedUsers = localStorage.getItem('cachedUsers');
-    return savedUsers ? JSON.parse(savedUsers) : [];
+    const parsedUsers = savedUsers ? JSON.parse(savedUsers) : [];
+    const currentUser = auth.currentUser;
+    return currentUser ? parsedUsers.filter(user => user.id !== currentUser.uid) : parsedUsers;
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [blockedUsers, setBlockedUsers] = useState(() => {
@@ -24,7 +25,7 @@ const messagepage = () => {
   // Fetch users from Firestore, excluding the current user
   const fetchUsers = useCallback(async () => {
     const now = Date.now();
-    const FETCH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+    const FETCH_INTERVAL = 60 * 1000; // 60 seconds in milliseconds
 
     if (now - lastFetchTime < FETCH_INTERVAL) {
       console.log("Using cached user data");
@@ -33,24 +34,32 @@ const messagepage = () => {
 
     try {
       const currentUser = auth.currentUser;
-      if (currentUser) {
-        const querySnapshot = await getDocs(collection(db, 'users'));
-        const usersList = querySnapshot.docs
-          .filter(doc => doc.id !== currentUser.uid)
-          .map(doc => {
-            const userData = doc.data();
-            return {
-              id: doc.id,
-              ...userData,
-              isOnline: userData.isOnline || false
-            };
-          });
-        setUsers(usersList);
-        localStorage.setItem('cachedUsers', JSON.stringify(usersList));
-        localStorage.setItem('lastUsersFetchTime', now.toString());
-        setLastFetchTime(now);
-        setRefreshKey(prevKey => prevKey + 1);
-      }
+      if (!currentUser) return;
+
+      // First get all users
+      const querySnapshot = await getDocs(collection(db, 'users'));
+      
+      // Immediately filter out the current user
+      const usersList = querySnapshot.docs
+        .filter(doc => doc.id !== currentUser.uid && doc.id !== auth.currentUser?.uid)
+        .map(doc => {
+          const userData = doc.data();
+          return {
+            id: doc.id,
+            ...userData,
+            photoURL: userData.photoURL || null,
+            isOnline: userData.isOnline || false
+          };
+        });
+
+      // Double-check filter before setting state
+      const filteredList = usersList.filter(user => user.id !== currentUser.uid);
+      
+      setUsers(filteredList);
+      localStorage.setItem('cachedUsers', JSON.stringify(filteredList));
+      localStorage.setItem('lastUsersFetchTime', now.toString());
+      setLastFetchTime(now);
+      setRefreshKey(prevKey => prevKey + 1);
     } catch (error) {
       console.error("Error fetching users: ", error);
     }
@@ -74,14 +83,19 @@ const messagepage = () => {
     setSearchQuery(event.target.value);
   };
 
-  const filteredUsers = users.filter(user => 
-    user.username && user.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const currentUser = auth.currentUser;
+    return (
+      user.id !== currentUser?.uid && // Filter out current user
+      user.username && 
+      user.username.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   useEffect(() => {
     fetchUsers(); // Initial fetch
 
-    // Set up real-time listeners for each user's online status
+    // Set up real-time listeners for each user's online status, username, and photoURL changes
     const unsubscribes = users.map(user => 
       onSnapshot(doc(db, 'users', user.id), 
         (docSnapshot) => {
@@ -89,7 +103,12 @@ const messagepage = () => {
           if (userData) {
             setUsers(prevUsers => {
               const updatedUsers = prevUsers.map(u => 
-                u.id === user.id ? { ...u, ...userData, isOnline: userData.isOnline || false } : u
+                u.id === user.id ? { 
+                  ...u, 
+                  ...userData, 
+                  photoURL: userData.photoURL || null,
+                  isOnline: userData.isOnline || false 
+                } : u
               );
               localStorage.setItem('cachedUsers', JSON.stringify(updatedUsers));
               return updatedUsers;
@@ -111,7 +130,7 @@ const messagepage = () => {
     // Set up interval for periodic refresh
     const intervalId = setInterval(() => {
       fetchUsers();
-    }, 5 * 60 * 1000); // Refresh every 5 minutes
+    }, 60 * 1000); // Refresh every 60 seconds
 
     // Clean up interval and listeners on component unmount
     return () => {
@@ -152,50 +171,52 @@ const messagepage = () => {
       <div className='max-w-2xl mx-auto px-4'>
         <ul className='space-y-4'>
           {filteredUsers.length > 0 ? (
-            filteredUsers.map((user) => (
-              <li key={user.id} className='flex items-center justify-between bg-gray-800 p-4 rounded-lg'>
-                <div className='flex items-center space-x-4'>
-                  <div className='w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center text-white text-xl font-bold overflow-hidden'>
-                    {user.photoURL ? (
-                      <img 
-                        src={`${user.photoURL}?${refreshKey}`} 
-                        alt={user.username} 
-                        className="w-full h-full object-cover" 
-                      />
+            filteredUsers
+              .filter(user => user.id !== auth.currentUser?.uid)
+              .map((user) => (
+                <li key={user.id} className='flex items-center justify-between bg-gray-800 p-4 rounded-lg'>
+                  <div className='flex items-center space-x-4'>
+                    <div className='w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center text-white text-xl font-bold overflow-hidden'>
+                      {user.photoURL ? (
+                        <img 
+                          src={`${user.photoURL}?${refreshKey}`} 
+                          alt={user.username} 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        user.username ? user.username.charAt(0).toUpperCase() : '?'
+                      )}
+                    </div>
+                    <span className='text-white truncate max-w-[8ch]' title={user.username}>
+                      {user.username ? (user.username.length > 8 ? `${user.username.slice(0, 8)}...` : user.username) : 'Unknown'}
+                    </span>
+                  </div>
+                  <div className='space-x-2'>
+                    <button 
+                      className={`bg-[#8A2BE2] text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300 ${blockedUsers.includes(user.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={() => navigate(`/chat/${user.id}`)}
+                      disabled={blockedUsers.includes(user.id)}
+                    >
+                      Chat
+                    </button>
+                    {blockedUsers.includes(user.id) ? (
+                      <button 
+                        className='bg-green-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
+                        onClick={() => handleUnblockUser(user)}
+                      >
+                        Unblock
+                      </button>
                     ) : (
-                      user.username ? user.username.charAt(0).toUpperCase() : '?'
+                      <button 
+                        className='bg-red-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
+                        onClick={() => handleBlockUser(user)}
+                      >
+                        Block
+                      </button>
                     )}
                   </div>
-                  <span className='text-white truncate max-w-[8ch]' title={user.username}>
-                    {user.username ? (user.username.length > 8 ? `${user.username.slice(0, 8)}...` : user.username) : 'Unknown'}
-                  </span>
-                </div>
-                <div className='space-x-2'>
-                  <button 
-                    className={`bg-[#8A2BE2] text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300 ${blockedUsers.includes(user.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onClick={() => navigate(`/chat/${user.id}`)}
-                    disabled={blockedUsers.includes(user.id)}
-                  >
-                    Chat
-                  </button>
-                  {blockedUsers.includes(user.id) ? (
-                    <button 
-                      className='bg-green-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
-                      onClick={() => handleUnblockUser(user)}
-                    >
-                      Unblock
-                    </button>
-                  ) : (
-                    <button 
-                      className='bg-red-600 text-white px-4 py-2 side-phone:px-2 side-phone:py-1 side-phone:text-[0.8rem] rounded-md hover:bg-opacity-80 transition duration-300'
-                      onClick={() => handleBlockUser(user)}
-                    >
-                      Block
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))
+                </li>
+              ))
           ) : (
             <li className='text-white text-center'>No users found</li>
           )}

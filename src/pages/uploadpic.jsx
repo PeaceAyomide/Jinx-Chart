@@ -59,7 +59,14 @@ const UploadPic = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-black">
+    <div className="flex flex-col items-center justify-center min-h-screen py-7 bg-black">
+      <button
+        type="button"
+        className="mb-4 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#8A2BE2] ml-[13rem]"
+        onClick={() => navigate('/chart')}
+      >
+        Skip
+      </button>
       <div className="p-6 bg-white rounded-lg shadow-md">
         <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">Upload Profile Picture</h2>
         <div className="mb-4">

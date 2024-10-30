@@ -2,6 +2,9 @@ import React, { useRef, useState, useEffect } from 'react'
 import { auth, storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
+import { db } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { FadeLoader } from 'react-spinners';
 
 const Profile = () => {
   const fileInputRef = useRef(null);
@@ -9,6 +12,7 @@ const Profile = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [profilePicUrl, setProfilePicUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -43,12 +47,25 @@ const Profile = () => {
     const file = event.target.files[0];
     if (file) {
       try {
+        setIsLoading(true);
         const user = auth.currentUser;
+        if (!user) {
+          throw new Error('No authenticated user found');
+        }
+
         const storageRef = ref(storage, `profile_pics/${user.uid}`);
         await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(storageRef);
 
+        // Update user profile
         await updateProfile(user, { photoURL: downloadURL });
+        
+        // Update Firestore document
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, {
+          photoURL: downloadURL
+        });
+
         setProfilePicUrl(downloadURL);
 
         // Update local storage
@@ -60,6 +77,8 @@ const Profile = () => {
       } catch (error) {
         console.error('Error updating profile picture:', error);
         alert('Failed to update profile picture. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -76,8 +95,20 @@ const Profile = () => {
     event.preventDefault();
     setIsEditingUsername(false);
     try {
+      setIsLoading(true);
       const user = auth.currentUser;
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
+
+      // Update Firebase Auth profile
       await updateProfile(user, { displayName: username });
+
+      // Update Firestore document
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        username: username
+      });
 
       // Update local storage
       const cachedData = JSON.parse(localStorage.getItem('profileData') || '{}');
@@ -88,11 +119,19 @@ const Profile = () => {
     } catch (error) {
       console.error('Error updating username:', error);
       alert('Failed to update username. Please try again.');
+      setUsername(auth.currentUser?.displayName || "");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <FadeLoader color="#ffffff" loading={isLoading} size={50} />
+        </div>
+      )}
       <div className="bg-white p-8 rounded-lg shadow-md w-full side-phone:w-[18rem] max-w-md">
         <div className="relative w-32 h-32 sm:w-48 sm:h-48 mx-auto mb-6">
           <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
